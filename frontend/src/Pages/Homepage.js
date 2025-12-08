@@ -25,7 +25,7 @@ function Homepage() {
   return (
     <Container maxW="xl" centerContent>
       <Box
-        d="flex"
+        display="flex"
         justifyContent="center"
         p={3}
         bg="white"
@@ -33,12 +33,26 @@ function Homepage() {
         m="40px 0 15px 0"
         borderRadius="lg"
         borderWidth="1px"
+        boxShadow="lg"
       >
-        <Text fontSize="4xl" fontFamily="cursive">
+        <Text 
+          fontSize="4xl" 
+          fontFamily="Work sans" 
+          fontWeight="bold"
+          bgGradient="linear(to-r, teal.400, teal.600)"
+          bgClip="text"
+        >
           Chat App
         </Text>
       </Box>
-      <Box bg="#F0F8FF" w="100%" p={4} borderRadius="lg" borderWidth="1px">
+      <Box 
+        bg="white" 
+        w="100%" 
+        p={4} 
+        borderRadius="lg" 
+        borderWidth="1px"
+        boxShadow="xl"
+      >
         <Tabs isFitted variant="soft-rounded">
           <TabList mb="1em">
             <Tab>Login</Tab>

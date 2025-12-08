@@ -94,8 +94,6 @@ function SideDrawer() {
   };
 
   const accessChat = async (userId) => {
-    console.log(userId);
-
     try {
       setLoadingChat(true);
       const config = {
@@ -125,23 +123,26 @@ function SideDrawer() {
   return (
     <>
       <Box
-        d="flex"
+        display="flex"
         justifyContent="space-between"
         alignItems="center"
         bg="white"
         w="100%"
         p="5px 10px 5px 10px"
-        borderWidth="5px"
+        borderWidth="1px"
+        borderBottom="2px solid"
+        borderColor="teal.200"
+        boxShadow="sm"
       >
         <Tooltip label="Search Users to chat" hasArrow placement="bottom-end">
-          <Button variant="ghost" onClick={onOpen}>
+          <Button variant="ghost" onClick={onOpen} colorScheme="teal">
             <i className="fas fa-search"></i>
-            <Text d={{ base: "none", md: "flex" }} px={4}>
+            <Text display={{ base: "none", md: "flex" }} px={4}>
               Search User
             </Text>
           </Button>
         </Tooltip>
-        <Text fontSize="2xl" fontFamily="Work sans">
+        <Text fontSize="2xl" fontFamily="Work sans" fontWeight="bold" color="teal.600">
           Talk-A-Tive
         </Text>
         <div>
@@ -153,21 +154,67 @@ function SideDrawer() {
               />
               <BellIcon fontSize="2xl" m={1} />
             </MenuButton>
-            <MenuList pl={2}>
-              {!notification.length && "No New Messages"}
-              {notification.map((notif) => (
-                <MenuItem
-                  key={notif._id}
-                  onClick={() => {
-                    setSelectedChat(notif.chat);
-                    setNotification(notification.filter((n) => n !== notif));
-                  }}
-                >
-                  {notif.chat.isGroupChat
-                    ? `New Message in ${notif.chat.chatName}`
-                    : `New Message from ${getSender(user, notif.chat.users)}`}
+            <MenuList pl={2} maxH="400px" overflowY="auto">
+              {!notification.length ? (
+                <MenuItem isDisabled>
+                  <Text color="gray.500" fontSize="sm">No New Notifications</Text>
                 </MenuItem>
-              ))}
+              ) : (
+                <>
+                  <MenuItem 
+                    onClick={() => setNotification([])}
+                    fontSize="xs"
+                    color="gray.600"
+                    _hover={{ bg: "gray.100" }}
+                  >
+                    Clear All
+                  </MenuItem>
+                  {notification.map((notif) => (
+                    <MenuItem
+                      key={notif._id}
+                      onClick={() => {
+                        setSelectedChat(notif.chat);
+                        setNotification(notification.filter((n) => n._id !== notif._id));
+                      }}
+                      _hover={{ bg: "teal.50" }}
+                      borderBottom="1px solid"
+                      borderColor="gray.100"
+                      py={2}
+                    >
+                      <Box>
+                        {notif.isGroupInvitation ? (
+                          <>
+                            <Text fontWeight="bold" fontSize="sm" color="teal.600">
+                              🎉 Added to Group
+                            </Text>
+                            <Text fontSize="xs" color="gray.600">
+                              {notif.chat.chatName} by {notif.addedBy?.name || 'Admin'}
+                            </Text>
+                          </>
+                        ) : notif.chat.isGroupChat ? (
+                          <>
+                            <Text fontWeight="semibold" fontSize="sm">
+                              💬 {notif.chat.chatName}
+                            </Text>
+                            <Text fontSize="xs" color="gray.600">
+                              New message
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text fontWeight="semibold" fontSize="sm">
+                              💬 {getSender(user, notif.chat.users)}
+                            </Text>
+                            <Text fontSize="xs" color="gray.600">
+                              New message
+                            </Text>
+                          </>
+                        )}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </>
+              )}
             </MenuList>
           </Menu>
           <Menu>
@@ -193,16 +240,21 @@ function SideDrawer() {
       <Drawer placement="left" onClose={onClose} isOpen={isOpen}>
         <DrawerOverlay />
         <DrawerContent>
-          <DrawerHeader borderBottomWidth="1px">Search Users</DrawerHeader>
+          <DrawerHeader borderBottomWidth="1px" color="teal.600" fontWeight="bold">Search Users</DrawerHeader>
           <DrawerBody>
-            <Box d="flex" pb={2}>
+            <Box display="flex" pb={2}>
               <Input
                 placeholder="Search by name or email"
                 mr={2}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
               />
-              <Button onClick={handleSearch}>Go</Button>
+              <Button onClick={handleSearch} colorScheme="teal">Go</Button>
             </Box>
             {loading ? (
               <ChatLoading />
@@ -215,7 +267,7 @@ function SideDrawer() {
                 />
               ))
             )}
-            {loadingChat && <Spinner ml="auto" d="flex" />}
+            {loadingChat && <Spinner ml="auto" display="flex" />}
           </DrawerBody>
         </DrawerContent>
       </Drawer>

@@ -1,8 +1,7 @@
 import { FormControl } from "@chakra-ui/form-control";
-import { Input } from "@chakra-ui/input";
-import { Box, Text } from "@chakra-ui/layout";
+import { Box, Text, HStack } from "@chakra-ui/layout";
 import "./styles.css";
-import { IconButton, Spinner, useToast } from "@chakra-ui/react";
+import { IconButton, Spinner, useToast, Input } from "@chakra-ui/react";
 import { getSender, getSenderFull } from "../config/ChatLogics";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -11,6 +10,10 @@ import ProfileModal from "./miscellaneous/ProfileModal";
 import ScrollableChat from "./ScrollableChat";
 import Lottie from "react-lottie";
 import animationData from "../animations/typing.json";
+import EmojiPicker from "./miscellaneous/EmojiPicker";
+import GifPicker from "./miscellaneous/GifPicker";
+import VoiceRecorder from "./miscellaneous/VoiceRecorder";
+import CallModal from "./miscellaneous/CallModal";
 
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
@@ -25,6 +28,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [callType, setCallType] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(false);
+  const [caller, setCaller] = useState(null);
+  const [callOffer, setCallOffer] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const toast = useToast();
 
   const defaultOptions = {
@@ -39,7 +48,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     ChatState();
 
   const fetchMessages = async () => {
-    if (!selectedChat) return;
+    if (!selectedChat || !user) return;
 
     try {
       const config = {
@@ -57,11 +66,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       setMessages(data);
       setLoading(false);
 
-      socket.emit("join chat", selectedChat._id);
+      if (socket) {
+        socket.emit("join chat", selectedChat._id);
+      }
     } catch (error) {
+      setLoading(false);
       toast({
         title: "Error Occured!",
-        description: "Failed to Load the Messages",
+        description: error.response?.data?.message || "Failed to Load the Messages",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -70,49 +82,177 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     }
   };
 
-  const sendMessage = async (event) => {
-    if (event.key === "Enter" && newMessage) {
+  const sendMessage = async (messageContent = null, messageType = "text", mediaUrl = null, voiceDuration = null) => {
+    const messageToSend = messageContent || newMessage.trim();
+    if (!messageToSend && !mediaUrl) return;
+    
+    if (socket) {
       socket.emit("stop typing", selectedChat._id);
-      try {
-        const config = {
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
+    }
+    
+    try {
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      
+      if (!messageContent) {
         setNewMessage("");
-        const { data } = await axios.post(
-          "/api/message",
-          {
-            content: newMessage,
-            chatId: selectedChat,
-          },
-          config
-        );
-        socket.emit("new message", data);
-        setMessages([...messages, data]);
-      } catch (error) {
-        toast({
-          title: "Error Occured!",
-          description: "Failed to send the Message",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-          position: "bottom",
-        });
       }
+      
+      const { data } = await axios.post(
+        "/api/message",
+        {
+          content: messageToSend,
+          chatId: selectedChat._id || selectedChat,
+          messageType,
+          mediaUrl,
+          voiceDuration,
+        },
+        config
+      );
+      
+      if (socket) {
+        socket.emit("new message", data);
+        // Mark as read for sender
+        socket.emit("mark-read", { messageId: data._id, chatId: selectedChat._id });
+      }
+      setMessages([...messages, data]);
+    } catch (error) {
+      if (!messageContent) {
+        setNewMessage(messageToSend); // Restore message on error
+      }
+      toast({
+        title: "Error Occurred!",
+        description: error.response?.data?.message || "Failed to send the Message",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
     }
   };
 
-  useEffect(() => {
-    socket = io(ENDPOINT);
-    socket.emit("setup", user);
-    socket.on("connected", () => setSocketConnected(true));
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop typing", () => setIsTyping(false));
+  const handleSendMessage = (event) => {
+    if (event.key === "Enter" && newMessage && selectedChat && user) {
+      sendMessage();
+    }
+  };
 
+  const handleEmojiSelect = (emoji) => {
+    setNewMessage((prev) => prev + emoji);
+  };
+
+  const handleGifSelect = async (gifUrl) => {
+    await sendMessage("", "gif", gifUrl);
+  };
+
+  const handleVoiceRecording = async (audioBlob, duration) => {
+    if (!selectedChat || !user) {
+      toast({
+        title: "Error",
+        description: "Please select a chat first",
+        status: "warning",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, `voice-${Date.now()}.webm`);
+      formData.append("chatId", selectedChat._id);
+      formData.append("duration", Math.round(duration || 0));
+
+      // Don't set Content-Type header - axios will set it automatically with boundary
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+
+      const { data } = await axios.post("/api/message/voice", formData, config);
+      
+      if (socket) {
+        socket.emit("new message", data);
+        socket.emit("mark-read", { messageId: data._id, chatId: selectedChat._id });
+      }
+      setMessages((prev) => [...prev, data]);
+      
+      toast({
+        title: "Voice message sent! 🎤",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Voice message error:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || error.message || "Failed to send voice message",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleCall = (type) => {
+    setCallType(type);
+    setIsCallModalOpen(true);
+    setIncomingCall(false);
+    setCallOffer(null);
+  };
+
+  useEffect(() => {
+    if (user) {
+      socket = io(ENDPOINT);
+      socket.emit("setup", user);
+      socket.on("connected", () => {
+        setSocketConnected(true);
+        socket.emit("user-online", user._id);
+      });
+      socket.on("typing", () => setIsTyping(true));
+      socket.on("stop typing", () => setIsTyping(false));
+      socket.on("user-online", (userId) => {
+        setOnlineUsers((prev) => [...prev.filter((id) => id !== userId), userId]);
+      });
+      socket.on("user-offline", (userId) => {
+        setOnlineUsers((prev) => prev.filter((id) => id !== userId));
+      });
+      socket.on("incoming-call", ({ caller: callCaller, callType: incomingCallType, offer }) => {
+        setCaller(callCaller);
+        setCallType(incomingCallType);
+        setCallOffer(offer);
+        setIncomingCall(true);
+        setIsCallModalOpen(true);
+      });
+      socket.on("message-read", ({ messageId }) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === messageId
+              ? { ...msg, readBy: [...(msg.readBy || []), user._id] }
+              : msg
+          )
+        );
+      });
+
+      return () => {
+        socket.emit("user-offline", user._id);
+        socket.off("connected");
+        socket.off("typing");
+        socket.off("stop typing");
+        socket.off("user-online");
+        socket.off("user-offline");
+        socket.off("incoming-call");
+        socket.off("message-read");
+        socket.disconnect();
+      };
+    }
     // eslint-disable-next-line
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchMessages();
@@ -122,25 +262,36 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   }, [selectedChat]);
 
   useEffect(() => {
-    socket.on("message recieved", (newMessageRecieved) => {
+    if (!socket) return;
+    
+    const handleMessageReceived = (newMessageRecieved) => {
       if (
         !selectedChatCompare || // if chat is not selected or doesn't match current chat
         selectedChatCompare._id !== newMessageRecieved.chat._id
       ) {
-        if (!notification.includes(newMessageRecieved)) {
-          setNotification([newMessageRecieved, ...notification]);
-          setFetchAgain(!fetchAgain);
-        }
+        setNotification((prev) => {
+          if (!prev.find((n) => n._id === newMessageRecieved._id)) {
+            return [newMessageRecieved, ...prev];
+          }
+          return prev;
+        });
+        setFetchAgain((prev) => !prev);
       } else {
-        setMessages([...messages, newMessageRecieved]);
+        setMessages((prev) => [...prev, newMessageRecieved]);
       }
-    });
+    };
+
+    socket.on("message recieved", handleMessageReceived);
+
+    return () => {
+      socket.off("message recieved", handleMessageReceived);
+    };
   });
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
 
-    if (!socketConnected) return;
+    if (!socketConnected || !socket || !selectedChat) return;
 
     if (!typing) {
       setTyping(true);
@@ -151,7 +302,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     setTimeout(() => {
       var timeNow = new Date().getTime();
       var timeDiff = timeNow - lastTypingTime;
-      if (timeDiff >= timerLength && typing) {
+      if (timeDiff >= timerLength && typing && socket) {
         socket.emit("stop typing", selectedChat._id);
         setTyping(false);
       }
@@ -177,24 +328,60 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               icon={<ArrowBackIcon />}
               onClick={() => setSelectedChat("")}
             />
-            {messages &&
-              (!selectedChat.isGroupChat ? (
-                <>
+            {!selectedChat.isGroupChat ? (
+              <>
+                <Box display="flex" alignItems="center" gap={2}>
                   {getSender(user, selectedChat.users)}
+                  {(() => {
+                    const otherUser = selectedChat.users.find((u) => u._id !== user._id);
+                    const isOnline = otherUser && onlineUsers.includes(otherUser._id);
+                    return (
+                      <Box
+                        w="8px"
+                        h="8px"
+                        borderRadius="50%"
+                        bg={isOnline ? "green.500" : "gray.400"}
+                        title={isOnline ? "Online" : "Offline"}
+                      />
+                    );
+                  })()}
+                </Box>
+                <HStack spacing={2}>
+                  <IconButton
+                    icon={<span style={{ fontSize: "18px" }}>📞</span>}
+                    size="sm"
+                    colorScheme="teal"
+                    onClick={() => handleCall("audio")}
+                    aria-label="Audio call"
+                    _hover={{ transform: "scale(1.1)", bg: "teal.100" }}
+                    transition="all 0.2s"
+                    title="Audio Call"
+                  />
+                  <IconButton
+                    icon={<span style={{ fontSize: "18px" }}>📹</span>}
+                    size="sm"
+                    colorScheme="teal"
+                    onClick={() => handleCall("video")}
+                    aria-label="Video call"
+                    _hover={{ transform: "scale(1.1)", bg: "teal.100" }}
+                    transition="all 0.2s"
+                    title="Video Call"
+                  />
                   <ProfileModal
                     user={getSenderFull(user, selectedChat.users)}
                   />
-                </>
-              ) : (
-                <>
-                  {selectedChat.chatName.toUpperCase()}
-                  <UpdateGroupChatModal
-                    fetchMessages={fetchMessages}
-                    fetchAgain={fetchAgain}
-                    setFetchAgain={setFetchAgain}
-                  />
-                </>
-              ))}
+                </HStack>
+              </>
+            ) : (
+              <>
+                {selectedChat.chatName?.toUpperCase() || "Group Chat"}
+                <UpdateGroupChatModal
+                  fetchMessages={fetchMessages}
+                  fetchAgain={fetchAgain}
+                  setFetchAgain={setFetchAgain}
+                />
+              </>
+            )}
           </Text>
           <Box
             d="flex"
@@ -222,7 +409,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             )}
 
             <FormControl
-              onKeyDown={sendMessage}
+              onKeyDown={handleSendMessage}
               id="first-name"
               isRequired
               mt={3}
@@ -231,7 +418,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 <div>
                   <Lottie
                     options={defaultOptions}
-                    // height={50}
                     width={70}
                     style={{ marginBottom: 15, marginLeft: 0 }}
                   />
@@ -239,14 +425,38 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               ) : (
                 <></>
               )}
-              <Input
-                variant="filled"
-                bg="#E0E0E0"
-                placeholder="Enter a message.."
-                value={newMessage}
-                onChange={typingHandler}
-              />
+              <HStack spacing={2} alignItems="center">
+                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                <GifPicker onGifSelect={handleGifSelect} />
+                <VoiceRecorder onRecordingComplete={handleVoiceRecording} />
+                <Input
+                  variant="filled"
+                  bg="#E0E0E0"
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={typingHandler}
+                  flex={1}
+                  borderRadius="full"
+                  _focus={{ bg: "#F0F0F0", borderColor: "teal.500" }}
+                />
+              </HStack>
             </FormControl>
+            {isCallModalOpen && (
+              <CallModal
+                isOpen={isCallModalOpen}
+                onClose={() => {
+                  setIsCallModalOpen(false);
+                  setIncomingCall(false);
+                  setCaller(null);
+                  setCallOffer(null);
+                }}
+                callType={callType}
+                selectedChat={selectedChat}
+                incomingCall={incomingCall}
+                caller={caller}
+                offer={callOffer}
+              />
+            )}
           </Box>
         </>
       ) : (

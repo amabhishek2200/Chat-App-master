@@ -17,6 +17,9 @@ const app = express();
 
 app.use(express.json()); // to accept json data
 
+// Serve static files from uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // app.get("/", (req, res) => {
 //   res.send("API Running!");
 // });
@@ -62,17 +65,36 @@ const io = require("socket.io")(server, {
   },
 });
 
+// Make io accessible to controllers
+app.set('io', io);
+
+const onlineUsers = new Set();
+
 io.on("connection", (socket) => {
   console.log("Connected to socket.io");
+  
   socket.on("setup", (userData) => {
     socket.join(userData._id);
+    onlineUsers.add(userData._id.toString());
+    socket.broadcast.emit("user-online", userData._id);
     socket.emit("connected");
+  });
+
+  socket.on("user-online", (userId) => {
+    onlineUsers.add(userId.toString());
+    socket.broadcast.emit("user-online", userId);
+  });
+
+  socket.on("user-offline", (userId) => {
+    onlineUsers.delete(userId.toString());
+    socket.broadcast.emit("user-offline", userId);
   });
 
   socket.on("join chat", (room) => {
     socket.join(room);
     console.log("User Joined Room: " + room);
   });
+  
   socket.on("typing", (room) => socket.in(room).emit("typing"));
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
@@ -88,8 +110,38 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.off("setup", () => {
+  socket.on("mark-read", ({ messageId, chatId }) => {
+    socket.to(chatId).emit("message-read", { messageId });
+  });
+
+  // Call handling
+  socket.on("call-user", ({ offer, chatId, callType, caller }) => {
+    socket.to(chatId).emit("incoming-call", { caller, callType, offer });
+  });
+
+  socket.on("call-answer", ({ answer, chatId }) => {
+    socket.to(chatId).emit("call-accepted", { answer });
+  });
+
+  socket.on("accept-call", ({ chatId }) => {
+    socket.to(chatId).emit("call-accepted");
+  });
+
+  socket.on("reject-call", ({ chatId }) => {
+    socket.to(chatId).emit("call-rejected");
+  });
+
+  socket.on("ice-candidate", ({ candidate, chatId }) => {
+    socket.to(chatId).emit("ice-candidate", { candidate });
+  });
+
+  socket.on("disconnect", () => {
     console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
+    onlineUsers.forEach((userId) => {
+      if (socket.rooms.has(userId)) {
+        onlineUsers.delete(userId);
+        socket.broadcast.emit("user-offline", userId);
+      }
+    });
   });
 });

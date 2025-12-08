@@ -3,19 +3,19 @@ import { Skeleton } from "@chakra-ui/skeleton";
 
 const ChatLoading = () => {
   return (
-    <Stack>
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
-      <Skeleton height="45px" />
+    <Stack spacing={2}>
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
+      <Skeleton height="45px" borderRadius="lg" />
     </Stack>
   );
 };

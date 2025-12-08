@@ -3,4 +3,23 @@
   flex-direction: column;
   overflow-y: scroll;
   scrollbar-width: none;
+  padding: 10px;
+}
+
+.messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.messages::-webkit-scrollbar-thumb {
+  background: #319795;
+  border-radius: 10px;
+}
+
+.messages::-webkit-scrollbar-thumb:hover {
+  background: #2c7a7b;
 }

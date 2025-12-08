@@ -36,6 +36,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
   const handleSearch = async (query) => {
     setSearch(query);
     if (!query) {
+      setSearchResult([]);
       return;
     }
 
@@ -46,8 +47,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      const { data } = await axios.get(`/api/user?search=${search}`, config);
-      console.log(data);
+      const { data } = await axios.get(`/api/user?search=${query}`, config);
       setLoading(false);
       setSearchResult(data);
     } catch (error) {
@@ -64,7 +64,19 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
   };
 
   const handleRename = async () => {
-    if (!groupChatName) return;
+    if (!groupChatName || !groupChatName.trim()) {
+      toast({
+        title: "Group name required",
+        description: "Please enter a new name for the group",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
+      return;
+    }
+
+    if (!selectedChat || !user) return;
 
     try {
       setRenameLoading(true);
@@ -77,20 +89,27 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
         `/api/chat/rename`,
         {
           chatId: selectedChat._id,
-          chatName: groupChatName,
+          chatName: groupChatName.trim(),
         },
         config
       );
 
-      console.log(data._id);
-      // setSelectedChat("");
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       setRenameLoading(false);
+      setGroupChatName("");
+      toast({
+        title: "Group Renamed! ✅",
+        description: `Group name updated to "${groupChatName.trim()}"`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
     } catch (error) {
       toast({
-        title: "Error Occured!",
-        description: error.response.data.message,
+        title: "Error Occurred!",
+        description: error.response?.data?.message || "Failed to rename group",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -98,14 +117,16 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
       });
       setRenameLoading(false);
     }
-    setGroupChatName("");
   };
 
   const handleAddUser = async (user1) => {
-    if (selectedChat.users.find((u) => u._id === user1._id)) {
+    if (!selectedChat || !user) return;
+    
+    if (selectedChat.users && selectedChat.users.find((u) => u._id === user1._id)) {
       toast({
         title: "User Already in group!",
-        status: "error",
+        description: "This user is already a member of the group",
+        status: "warning",
         duration: 5000,
         isClosable: true,
         position: "bottom",
@@ -113,9 +134,10 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
       return;
     }
 
-    if (selectedChat.groupAdmin._id !== user._id) {
+    if (selectedChat.groupAdmin && selectedChat.groupAdmin._id !== user._id) {
       toast({
-        title: "Only admins can add someone!",
+        title: "Only admins can add members!",
+        description: "You need to be an admin to add users to this group",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -143,10 +165,18 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       setLoading(false);
+      toast({
+        title: "User Added! ✅",
+        description: `${user1.name} has been added to the group`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+        position: "bottom",
+      });
     } catch (error) {
       toast({
-        title: "Error Occured!",
-        description: error.response.data.message,
+        title: "Error Occurred!",
+        description: error.response?.data?.message || "Failed to add user",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -154,7 +184,8 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
       });
       setLoading(false);
     }
-    setGroupChatName("");
+    setSearch("");
+    setSearchResult([]);
   };
 
   const handleRemove = async (user1) => {
@@ -203,73 +234,132 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
     setGroupChatName("");
   };
 
+  if (!selectedChat) return null;
+
   return (
     <>
-      <IconButton d={{ base: "flex" }} icon={<ViewIcon />} onClick={onOpen} />
+      <IconButton 
+        display={{ base: "flex" }} 
+        icon={<ViewIcon />} 
+        onClick={onOpen} 
+        colorScheme="teal"
+        size="sm"
+        aria-label="View Group Info"
+      />
 
-      <Modal onClose={onClose} isOpen={isOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
+      <Modal onClose={onClose} isOpen={isOpen} isCentered size="lg">
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+        <ModalContent borderRadius="xl" boxShadow="2xl">
           <ModalHeader
-            fontSize="35px"
+            fontSize="24px"
             fontFamily="Work sans"
-            d="flex"
+            display="flex"
             justifyContent="center"
+            color="teal.600"
+            fontWeight="bold"
+            pb={2}
           >
-            {selectedChat.chatName}
+            👥 {selectedChat.chatName || "Group Chat"}
           </ModalHeader>
 
           <ModalCloseButton />
-          <ModalBody d="flex" flexDir="column" alignItems="center">
-            <Box w="100%" d="flex" flexWrap="wrap" pb={3}>
-              {selectedChat.users.map((u) => (
-                <UserBadgeItem
-                  key={u._id}
-                  user={u}
-                  admin={selectedChat.groupAdmin}
-                  handleFunction={() => handleRemove(u)}
-                />
-              ))}
+          <ModalBody display="flex" flexDir="column" alignItems="center" pb={6}>
+            <Box 
+              w="100%" 
+              display="flex" 
+              flexWrap="wrap" 
+              pb={3}
+              p={3}
+              bg="teal.50"
+              borderRadius="md"
+              border="1px solid"
+              borderColor="teal.200"
+              mb={4}
+            >
+              <Text fontSize="sm" color="teal.700" mb={2} w="100%" fontWeight="semibold">
+                Group Members ({selectedChat.users?.length || 0}):
+              </Text>
+              {selectedChat.users && selectedChat.users.length > 0 ? (
+                selectedChat.users.map((u) => (
+                  <UserBadgeItem
+                    key={u._id}
+                    user={u}
+                    admin={selectedChat.groupAdmin}
+                    handleFunction={() => handleRemove(u)}
+                  />
+                ))
+              ) : (
+                <Text fontSize="xs" color="gray.500">No members</Text>
+              )}
             </Box>
-            <FormControl d="flex">
+            <FormControl display="flex" mb={4} w="100%">
               <Input
-                placeholder="Chat Name"
-                mb={3}
-                value={groupChatName}
+                placeholder="Enter new group name"
+                value={groupChatName || ""}
                 onChange={(e) => setGroupChatName(e.target.value)}
+                size="lg"
+                borderRadius="md"
+                focusBorderColor="teal.500"
+                mr={2}
               />
               <Button
                 variant="solid"
                 colorScheme="teal"
-                ml={1}
                 isLoading={renameloading}
                 onClick={handleRename}
+                size="lg"
+                borderRadius="md"
               >
-                Update
+                Rename
               </Button>
             </FormControl>
-            <FormControl>
+            <FormControl w="100%" mb={3}>
               <Input
-                placeholder="Add User to group"
-                mb={1}
+                placeholder="Search users to add"
+                value={search}
                 onChange={(e) => handleSearch(e.target.value)}
+                size="lg"
+                borderRadius="md"
+                focusBorderColor="teal.500"
               />
             </FormControl>
 
             {loading ? (
-              <Spinner size="lg" />
+              <Box display="flex" justifyContent="center" p={4} w="100%">
+                <Spinner size="lg" color="teal.500" thickness="4px" />
+              </Box>
             ) : (
-              searchResult?.map((user) => (
-                <UserListItem
-                  key={user._id}
-                  user={user}
-                  handleFunction={() => handleAddUser(user)}
-                />
-              ))
+              searchResult && searchResult.length > 0 && (
+                <Box w="100%" maxH="200px" overflowY="auto" borderRadius="md">
+                  {searchResult.map((user) => (
+                    <UserListItem
+                      key={user._id}
+                      user={user}
+                      handleFunction={() => {
+                        handleAddUser(user);
+                        setSearch("");
+                        setSearchResult([]);
+                      }}
+                    />
+                  ))}
+                </Box>
+              )
+            )}
+            {!loading && search && searchResult && searchResult.length === 0 && (
+              <Text fontSize="sm" color="gray.500" mt={2}>
+                No users found
+              </Text>
             )}
           </ModalBody>
           <ModalFooter>
-            <Button onClick={() => handleRemove(user)} colorScheme="red">
+            <Button 
+              onClick={() => handleRemove(user)} 
+              colorScheme="red"
+              size="lg"
+              borderRadius="md"
+              width="100%"
+              fontWeight="semibold"
+            >
               Leave Group
             </Button>
           </ModalFooter>

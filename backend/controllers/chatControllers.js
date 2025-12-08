@@ -104,6 +104,25 @@ const createGroupChat = asyncHandler(async (req, res) => {
       .populate("users", "-password")
       .populate("groupAdmin", "-password");
 
+    // Notify all added users about the new group
+    const io = req.app.get('io');
+    if (io && fullGroupChat.users) {
+      fullGroupChat.users.forEach((user) => {
+        // Skip the creator (admin) - they already created the group
+        if (user._id.toString() !== req.user._id.toString()) {
+          io.to(user._id.toString()).emit("added-to-group", {
+            chat: fullGroupChat,
+            addedBy: {
+              _id: req.user._id,
+              name: req.user.name,
+              email: req.user.email,
+              pic: req.user.pic,
+            },
+          });
+        }
+      });
+    }
+
     res.status(200).json(fullGroupChat);
   } catch (error) {
     res.status(400);
@@ -189,6 +208,19 @@ const addToGroup = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Chat Not Found");
   } else {
+    // Emit socket event to notify the added user
+    const io = req.app.get('io');
+    if (io) {
+      io.to(userId.toString()).emit("added-to-group", {
+        chat: added,
+        addedBy: {
+          _id: req.user._id,
+          name: req.user.name,
+          email: req.user.email,
+          pic: req.user.pic,
+        },
+      });
+    }
     res.json(added);
   }
 });

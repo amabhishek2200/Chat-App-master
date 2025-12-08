@@ -98,22 +98,28 @@ const Login = () => {
         </InputGroup>
       </FormControl>
       <Button
-        colorScheme="blue"
+        colorScheme="teal"
         width="100%"
         style={{ marginTop: 15 }}
         onClick={submitHandler}
         isLoading={loading}
+        size="lg"
+        _hover={{ transform: "translateY(-2px)", boxShadow: "lg" }}
+        transition="all 0.2s"
       >
         Login
       </Button>
       <Button
-        variant="solid"
-        colorScheme="red"
+        variant="outline"
+        colorScheme="teal"
         width="100%"
         onClick={() => {
           setEmail("guest@example.com");
           setPassword("123456");
         }}
+        size="md"
+        _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
+        transition="all 0.2s"
       >
         Get Guest User Credentials
       </Button>
