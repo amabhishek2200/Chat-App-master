@@ -16,8 +16,8 @@ import {
 } from "../utils/encryption";
 import io from "socket.io-client";
 
-const ENDPOINT = "http://localhost:5000";
-var socket;
+const ENDPOINT = window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin;
+let socket;
 
 // Component to display latest message with decryption
 const LatestMessagePreview = ({ message, chatId }) => {
@@ -69,7 +69,7 @@ const MyChats = ({ fetchAgain }) => {
 
   const fetchChats = async () => {
     if (!user) return;
-    
+
     try {
       const config = {
         headers: {
@@ -112,12 +112,12 @@ const MyChats = ({ fetchAgain }) => {
 
     socket = io(ENDPOINT);
     socket.emit("setup", user);
-    
+
     const handleAddedToGroup = (data) => {
       const { chat, addedBy } = data;
-      
+
       if (!chat || !addedBy) return;
-      
+
       // Add the group to chats list if not already present
       setChats((prevChats) => {
         if (prevChats && !prevChats.find((c) => c._id === chat._id)) {
@@ -125,7 +125,7 @@ const MyChats = ({ fetchAgain }) => {
         }
         return prevChats;
       });
-      
+
       // Show notification
       const notificationData = {
         _id: chat._id + Date.now(),
@@ -133,12 +133,12 @@ const MyChats = ({ fetchAgain }) => {
         addedBy: addedBy,
         isGroupInvitation: true,
       };
-      
+
       setNotification((prevNotifications) => [notificationData, ...prevNotifications]);
-      
+
       toast({
         title: "Added to Group! 🎉",
-        description: `${addedBy.name || 'Admin'} added you to ${chat.chatName || 'a group'}`,
+        description: `${addedBy.name || "Admin"} added you to ${chat.chatName || "a group"}`,
         status: "info",
         duration: 5000,
         isClosable: true,

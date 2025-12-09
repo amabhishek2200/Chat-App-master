@@ -15,6 +15,7 @@ import {
   Box,
   IconButton,
   Spinner,
+  Text,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
@@ -121,7 +122,7 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
 
   const handleAddUser = async (user1) => {
     if (!selectedChat || !user) return;
-    
+
     if (selectedChat.users && selectedChat.users.find((u) => u._id === user1._id)) {
       toast({
         title: "User Already in group!",
@@ -238,10 +239,10 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
 
   return (
     <>
-      <IconButton 
-        display={{ base: "flex" }} 
-        icon={<ViewIcon />} 
-        onClick={onOpen} 
+      <IconButton
+        display={{ base: "flex" }}
+        icon={<ViewIcon />}
+        onClick={onOpen}
         colorScheme="teal"
         size="sm"
         aria-label="View Group Info"
@@ -264,10 +265,10 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
 
           <ModalCloseButton />
           <ModalBody display="flex" flexDir="column" alignItems="center" pb={6}>
-            <Box 
-              w="100%" 
-              display="flex" 
-              flexWrap="wrap" 
+            <Box
+              w="100%"
+              display="flex"
+              flexWrap="wrap"
               pb={3}
               p={3}
               bg="teal.50"
@@ -352,8 +353,8 @@ const UpdateGroupChatModal = ({ fetchMessages, fetchAgain, setFetchAgain }) => {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button 
-              onClick={() => handleRemove(user)} 
+            <Button
+              onClick={() => handleRemove(user)}
               colorScheme="red"
               size="lg"
               borderRadius="md"

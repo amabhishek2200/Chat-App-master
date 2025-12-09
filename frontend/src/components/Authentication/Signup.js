@@ -41,6 +41,7 @@ const Signup = () => {
         isClosable: true,
         position: "bottom",
       });
+      setPicLoading(false);
       return;
     }
     try {
@@ -92,6 +93,7 @@ const Signup = () => {
         isClosable: true,
         position: "bottom",
       });
+      setPicLoading(false);
       return;
     }
     if (pics.type === "image/jpeg" || pics.type === "image/png") {

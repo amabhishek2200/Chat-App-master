@@ -13,6 +13,7 @@ import {
   useToast,
   Box,
   Spinner,
+  Text,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
@@ -22,7 +23,7 @@ import UserListItem from "../userAvatar/UserListItem";
 
 const GroupChatModal = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [groupChatName, setGroupChatName] = useState();
+  const [groupChatName, setGroupChatName] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [searchResult, setSearchResult] = useState([]);
@@ -32,7 +33,7 @@ const GroupChatModal = ({ children }) => {
   const { user, chats, setChats } = ChatState();
 
   const handleGroup = (userToAdd) => {
-    if (selectedUsers.includes(userToAdd)) {
+    if (selectedUsers.find((sel) => sel._id === userToAdd._id)) {
       toast({
         title: "User already added",
         status: "warning",
@@ -61,7 +62,6 @@ const GroupChatModal = ({ children }) => {
         },
       };
       const { data } = await axios.get(`/api/user?search=${query}`, config);
-      setLoading(false);
       setSearchResult(data);
     } catch (error) {
       toast({
@@ -72,6 +72,8 @@ const GroupChatModal = ({ children }) => {
         isClosable: true,
         position: "bottom-left",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,7 +121,7 @@ const GroupChatModal = ({ children }) => {
         },
         config
       );
-      setChats([data, ...chats]);
+      setChats([data, ...(chats || [])]);
       setGroupChatName("");
       setSelectedUsers([]);
       setSearch("");
@@ -171,7 +173,7 @@ const GroupChatModal = ({ children }) => {
               <Input
                 placeholder="Enter Group Name"
                 mb={3}
-                value={groupChatName || ""}
+                value={groupChatName}
                 onChange={(e) => setGroupChatName(e.target.value)}
                 size="lg"
                 borderRadius="md"
@@ -190,10 +192,10 @@ const GroupChatModal = ({ children }) => {
               />
             </FormControl>
             {selectedUsers.length > 0 && (
-              <Box 
-                w="100%" 
-                display="flex" 
-                flexWrap="wrap" 
+              <Box
+                w="100%"
+                display="flex"
+                flexWrap="wrap"
                 mb={3}
                 p={2}
                 bg="teal.50"
@@ -218,21 +220,20 @@ const GroupChatModal = ({ children }) => {
                 <Spinner size="lg" color="teal.500" thickness="4px" />
               </Box>
             ) : (
-              searchResult && searchResult.length > 0 && (
+              searchResult &&
+              searchResult.length > 0 && (
                 <Box w="100%" maxH="200px" overflowY="auto" borderRadius="md">
-                  {searchResult
-                    ?.slice(0, 4)
-                    .map((user) => (
-                      <UserListItem
-                        key={user._id}
-                        user={user}
-                        handleFunction={() => {
-                          handleGroup(user);
-                          setSearch("");
-                          setSearchResult([]);
-                        }}
-                      />
-                    ))}
+                  {searchResult.slice(0, 4).map((user) => (
+                    <UserListItem
+                      key={user._id}
+                      user={user}
+                      handleFunction={() => {
+                        handleGroup(user);
+                        setSearch("");
+                        setSearchResult([]);
+                      }}
+                    />
+                  ))}
                 </Box>
               )
             )}
@@ -243,9 +244,9 @@ const GroupChatModal = ({ children }) => {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button 
-              onClick={handleSubmit} 
-              colorScheme="teal" 
+            <Button
+              onClick={handleSubmit}
+              colorScheme="teal"
               size="lg"
               isLoading={loading}
               loadingText="Creating..."
@@ -263,3 +264,4 @@ const GroupChatModal = ({ children }) => {
 };
 
 export default GroupChatModal;
+

@@ -6,10 +6,10 @@ const messageSchema = mongoose.Schema(
     content: { type: String, trim: true },
     chat: { type: mongoose.Schema.Types.ObjectId, ref: "Chat" },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    messageType: { 
-      type: String, 
-      enum: ['text', 'image', 'gif', 'voice', 'video', 'audio'], 
-      default: 'text' 
+    messageType: {
+      type: String,
+      enum: ["text", "image", "gif", "voice", "video", "audio"],
+      default: "text",
     },
     mediaUrl: { type: String },
     voiceDuration: { type: Number }, // in seconds
@@ -19,3 +19,4 @@ const messageSchema = mongoose.Schema(
 
 const Message = mongoose.model("Message", messageSchema);
 module.exports = Message;
+

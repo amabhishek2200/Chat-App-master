@@ -18,7 +18,7 @@ import CallModal from "./miscellaneous/CallModal";
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
 import { ChatState } from "../Context/ChatProvider";
-const ENDPOINT = "http://localhost:5000"; // "https://talk-a-tive.herokuapp.com"; -> After deployment
+const ENDPOINT = window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin;
 var socket, selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
@@ -85,11 +85,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const sendMessage = async (messageContent = null, messageType = "text", mediaUrl = null, voiceDuration = null) => {
     const messageToSend = messageContent || newMessage.trim();
     if (!messageToSend && !mediaUrl) return;
-    
+
     if (socket) {
       socket.emit("stop typing", selectedChat._id);
     }
-    
+
     try {
       const config = {
         headers: {
@@ -97,11 +97,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      
+
       if (!messageContent) {
         setNewMessage("");
       }
-      
+
       const { data } = await axios.post(
         "/api/message",
         {
@@ -113,7 +113,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         },
         config
       );
-      
+
       if (socket) {
         socket.emit("new message", data);
         // Mark as read for sender
@@ -174,13 +174,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       };
 
       const { data } = await axios.post("/api/message/voice", formData, config);
-      
+
       if (socket) {
         socket.emit("new message", data);
         socket.emit("mark-read", { messageId: data._id, chatId: selectedChat._id });
       }
       setMessages((prev) => [...prev, data]);
-      
+
       toast({
         title: "Voice message sent! 🎤",
         status: "success",
@@ -263,7 +263,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleMessageReceived = (newMessageRecieved) => {
       if (
         !selectedChatCompare || // if chat is not selected or doesn't match current chat

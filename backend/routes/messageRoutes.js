@@ -29,19 +29,19 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
     // Accept audio files
-    if (file.mimetype.startsWith('audio/') || file.mimetype === 'video/webm') {
+    if (file.mimetype.startsWith("audio/") || file.mimetype === "video/webm") {
       cb(null, true);
     } else {
-      cb(new Error('Only audio files are allowed!'), false);
+      cb(new Error("Only audio files are allowed!"), false);
     }
-  }
+  },
 });
 
 router.route("/:chatId").get(protect, allMessages);

@@ -35,9 +35,9 @@ function Homepage() {
         borderWidth="1px"
         boxShadow="lg"
       >
-        <Text 
-          fontSize="4xl" 
-          fontFamily="Work sans" 
+        <Text
+          fontSize="4xl"
+          fontFamily="Work sans"
           fontWeight="bold"
           bgGradient="linear(to-r, teal.400, teal.600)"
           bgClip="text"
@@ -45,11 +45,11 @@ function Homepage() {
           Chat App
         </Text>
       </Box>
-      <Box 
-        bg="white" 
-        w="100%" 
-        p={4} 
-        borderRadius="lg" 
+      <Box
+        bg="white"
+        w="100%"
+        p={4}
+        borderRadius="lg"
         borderWidth="1px"
         boxShadow="xl"
       >

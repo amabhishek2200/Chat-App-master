@@ -79,7 +79,6 @@ function SideDrawer() {
 
       const { data } = await axios.get(`/api/user?search=${search}`, config);
 
-      setLoading(false);
       setSearchResult(data);
     } catch (error) {
       toast({
@@ -90,6 +89,8 @@ function SideDrawer() {
         isClosable: true,
         position: "bottom-left",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -106,7 +107,6 @@ function SideDrawer() {
 
       if (!chats.find((c) => c._id === data._id)) setChats([data, ...chats]);
       setSelectedChat(data);
-      setLoadingChat(false);
       onClose();
     } catch (error) {
       toast({
@@ -117,6 +117,8 @@ function SideDrawer() {
         isClosable: true,
         position: "bottom-left",
       });
+    } finally {
+      setLoadingChat(false);
     }
   };
 
@@ -161,7 +163,7 @@ function SideDrawer() {
                 </MenuItem>
               ) : (
                 <>
-                  <MenuItem 
+                  <MenuItem
                     onClick={() => setNotification([])}
                     fontSize="xs"
                     color="gray.600"
@@ -188,7 +190,7 @@ function SideDrawer() {
                               🎉 Added to Group
                             </Text>
                             <Text fontSize="xs" color="gray.600">
-                              {notif.chat.chatName} by {notif.addedBy?.name || 'Admin'}
+                              {notif.chat.chatName} by {notif.addedBy?.name || "Admin"}
                             </Text>
                           </>
                         ) : notif.chat.isGroupChat ? (
@@ -276,3 +278,4 @@ function SideDrawer() {
 }
 
 export default SideDrawer;
+

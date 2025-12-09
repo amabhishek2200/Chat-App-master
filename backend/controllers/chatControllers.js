@@ -105,7 +105,7 @@ const createGroupChat = asyncHandler(async (req, res) => {
       .populate("groupAdmin", "-password");
 
     // Notify all added users about the new group
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io && fullGroupChat.users) {
       fullGroupChat.users.forEach((user) => {
         // Skip the creator (admin) - they already created the group
@@ -122,7 +122,6 @@ const createGroupChat = asyncHandler(async (req, res) => {
         }
       });
     }
-
     res.status(200).json(fullGroupChat);
   } catch (error) {
     res.status(400);
@@ -209,7 +208,7 @@ const addToGroup = asyncHandler(async (req, res) => {
     throw new Error("Chat Not Found");
   } else {
     // Emit socket event to notify the added user
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
       io.to(userId.toString()).emit("added-to-group", {
         chat: added,

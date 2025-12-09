@@ -29,7 +29,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     return res.sendStatus(400);
   }
 
-  var newMessage = {
+  const newMessage = {
     sender: req.user._id,
     content: content || "",
     chat: chatId,
@@ -39,13 +39,13 @@ const sendMessage = asyncHandler(async (req, res) => {
   };
 
   try {
-    var message = await Message.create(newMessage);
+    let message = await Message.create(newMessage);
 
     message = await Message.populate(message, [
       { path: "sender", select: "name pic" },
-      { path: "chat" }
+      { path: "chat" },
     ]);
-    
+
     message = await User.populate(message, {
       path: "chat.users",
       select: "name pic email",
@@ -83,27 +83,27 @@ const sendVoiceMessage = asyncHandler(async (req, res) => {
   }
 
   // Create media URL - use request host for better compatibility
-  const host = req.get('host');
-  const protocol = req.protocol || 'http';
+  const host = req.get("host");
+  const protocol = req.protocol || "http";
   const mediaUrl = `${protocol}://${host}/uploads/voice/${audioFile.filename}`;
 
-  var newMessage = {
+  const newMessage = {
     sender: req.user._id,
     content: "🎤 Voice message",
     chat: chatId,
     messageType: "voice",
     mediaUrl: mediaUrl,
-    voiceDuration: parseInt(duration) || 0,
+    voiceDuration: parseInt(duration, 10) || 0,
   };
 
   try {
-    var message = await Message.create(newMessage);
+    let message = await Message.create(newMessage);
 
     message = await Message.populate(message, [
       { path: "sender", select: "name pic" },
-      { path: "chat" }
+      { path: "chat" },
     ]);
-    
+
     message = await User.populate(message, {
       path: "chat.users",
       select: "name pic email",
