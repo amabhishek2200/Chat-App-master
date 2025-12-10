@@ -16,7 +16,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChatState } from "../../Context/ChatProvider";
 import io from "socket.io-client";
 
-const ENDPOINT = "http://localhost:5000";
+const ENDPOINT = window.location.hostname === "localhost" ? "http://localhost:5000" : window.location.origin;
 
 const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, caller, offer }) => {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -55,7 +55,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
       }
 
       socketRef.current = io(ENDPOINT);
-      
+
       // Wait for socket to connect before proceeding
       if (!socketRef.current.connected) {
         await new Promise((resolve, reject) => {
@@ -63,28 +63,28 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
             reject(new Error("Socket initialization failed"));
             return;
           }
-          
+
           const timeout = setTimeout(() => {
             reject(new Error("Socket connection timeout"));
           }, 5000);
-          
+
           socketRef.current.once("connect", () => {
             clearTimeout(timeout);
             resolve();
           });
-          
+
           socketRef.current.once("connect_error", (error) => {
             clearTimeout(timeout);
             reject(error);
           });
         });
       }
-      
+
       // Join the chat room to send/receive call events
       if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit("join chat", selectedChat._id);
       }
-      
+
       // Request media with better error handling
       let stream;
       try {
@@ -94,11 +94,11 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         });
       } catch (mediaError) {
         let errorMessage = "Failed to access camera/microphone. ";
-        
+
         if (mediaError.name === "NotAllowedError" || mediaError.name === "PermissionDeniedError") {
           errorMessage += "Please allow camera and microphone permissions in your browser settings.";
         } else if (mediaError.name === "NotFoundError" || mediaError.name === "DevicesNotFoundError") {
-          errorMessage += callType === "video" 
+          errorMessage += callType === "video"
             ? "No camera found. Please connect a camera and try again."
             : "No microphone found. Please connect a microphone and try again.";
         } else if (mediaError.name === "NotReadableError" || mediaError.name === "TrackStartError") {
@@ -108,7 +108,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         } else {
           errorMessage += mediaError.message || "Unknown error occurred.";
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -185,7 +185,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
       });
     } catch (error) {
       console.error("Error initializing call:", error);
-      
+
       // Clean up on error
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -195,7 +195,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         localStream.getTracks().forEach((track) => track.stop());
         setLocalStream(null);
       }
-      
+
       toast({
         title: "Call Failed",
         description: error.message || "Failed to initialize call. Please check permissions and try again.",
@@ -203,7 +203,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         duration: 7000,
         isClosable: true,
       });
-      
+
       // Close the modal on error
       onClose();
     }
@@ -214,7 +214,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
       // Initialize socket if not already initialized
       if (!socketRef.current) {
         socketRef.current = io(ENDPOINT);
-        
+
         // Wait for socket to connect before proceeding
         if (!socketRef.current.connected) {
           await new Promise((resolve, reject) => {
@@ -222,23 +222,23 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
               reject(new Error("Socket initialization failed"));
               return;
             }
-            
+
             const timeout = setTimeout(() => {
               reject(new Error("Socket connection timeout"));
             }, 5000);
-            
+
             socketRef.current.once("connect", () => {
               clearTimeout(timeout);
               resolve();
             });
-            
+
             socketRef.current.once("connect_error", (error) => {
               clearTimeout(timeout);
               reject(error);
             });
           });
         }
-        
+
         // Join the chat room to receive call events
         if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit("join chat", selectedChat._id);
@@ -259,11 +259,11 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         });
       } catch (mediaError) {
         let errorMessage = "Failed to access camera/microphone. ";
-        
+
         if (mediaError.name === "NotAllowedError" || mediaError.name === "PermissionDeniedError") {
           errorMessage += "Please allow camera and microphone permissions in your browser settings.";
         } else if (mediaError.name === "NotFoundError" || mediaError.name === "DevicesNotFoundError") {
-          errorMessage += callType === "video" 
+          errorMessage += callType === "video"
             ? "No camera found. Please connect a camera and try again."
             : "No microphone found. Please connect a microphone and try again.";
         } else if (mediaError.name === "NotReadableError" || mediaError.name === "TrackStartError") {
@@ -273,7 +273,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         } else {
           errorMessage += mediaError.message || "Unknown error occurred.";
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -323,7 +323,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
       // Set the remote description with the offer
       if (offer) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        
+
         // Create and set local description (answer)
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -344,7 +344,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
       }
     } catch (error) {
       console.error("Error accepting call:", error);
-      
+
       // Clean up on error
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
@@ -354,7 +354,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         socketRef.current.disconnect();
         socketRef.current = null;
       }
-      
+
       toast({
         title: "Call Failed",
         description: error.message || "Failed to accept call. Please check permissions and try again.",
@@ -362,7 +362,7 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         duration: 7000,
         isClosable: true,
       });
-      
+
       endCall();
     }
   };
@@ -460,18 +460,18 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
         <ModalFooter justifyContent="center" gap={4}>
           {incomingCall ? (
             <>
-              <Button 
-                colorScheme="green" 
-                onClick={handleAcceptCall} 
+              <Button
+                colorScheme="green"
+                onClick={handleAcceptCall}
                 leftIcon={<span style={{ fontSize: "18px" }}>📞</span>}
                 size="lg"
                 borderRadius="full"
               >
                 Accept
               </Button>
-              <Button 
-                colorScheme="red" 
-                onClick={handleRejectCall} 
+              <Button
+                colorScheme="red"
+                onClick={handleRejectCall}
                 leftIcon={<CloseIcon />}
                 size="lg"
                 borderRadius="full"
@@ -480,9 +480,9 @@ const CallModal = ({ isOpen, onClose, callType, selectedChat, incomingCall, call
               </Button>
             </>
           ) : (
-            <Button 
-              colorScheme="red" 
-              onClick={endCall} 
+            <Button
+              colorScheme="red"
+              onClick={endCall}
               leftIcon={<CloseIcon />}
               size="lg"
               borderRadius="full"
