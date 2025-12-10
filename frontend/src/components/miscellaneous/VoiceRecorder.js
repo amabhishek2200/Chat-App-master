@@ -33,35 +33,40 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
         const audio = new Audio(audioUrl);
-        
+
         // Calculate duration from chunks or use recorded duration
         const recordedDuration = duration;
-        
+
+        // Flag to ensure callback is called only once
+        let callbackCalled = false;
+
+        const sendRecording = (audioDuration) => {
+          if (!callbackCalled) {
+            callbackCalled = true;
+            onRecordingComplete(audioBlob, audioDuration);
+            URL.revokeObjectURL(audioUrl);
+          }
+        };
+
         // Try to get duration from audio element
         audio.onloadedmetadata = () => {
           const audioDuration = audio.duration || recordedDuration;
-          onRecordingComplete(audioBlob, audioDuration);
-          URL.revokeObjectURL(audioUrl);
+          sendRecording(audioDuration);
         };
-        
+
         // Fallback if metadata doesn't load
         audio.onerror = () => {
-          onRecordingComplete(audioBlob, recordedDuration);
-          URL.revokeObjectURL(audioUrl);
+          sendRecording(recordedDuration);
         };
-        
+
         // Timeout fallback
         setTimeout(() => {
-          if (audio.readyState >= 2) {
-            const audioDuration = audio.duration || recordedDuration;
-            onRecordingComplete(audioBlob, audioDuration);
-            URL.revokeObjectURL(audioUrl);
-          } else {
-            onRecordingComplete(audioBlob, recordedDuration);
-            URL.revokeObjectURL(audioUrl);
+          if (!callbackCalled) {
+            const audioDuration = (audio.readyState >= 2 && audio.duration) || recordedDuration;
+            sendRecording(audioDuration);
           }
         }, 1000);
-        
+
         stream.getTracks().forEach((track) => track.stop());
       };
 

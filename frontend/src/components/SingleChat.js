@@ -428,7 +428,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               <HStack spacing={2} alignItems="center">
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
                 <GifPicker onGifSelect={handleGifSelect} />
-                <VoiceRecorder onRecordingComplete={handleVoiceRecording} />
                 <Input
                   variant="filled"
                   bg="#E0E0E0"
@@ -439,6 +438,20 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   borderRadius="full"
                   _focus={{ bg: "#F0F0F0", borderColor: "teal.500" }}
                 />
+                {newMessage.trim() ? (
+                  <IconButton
+                    icon={<span style={{ fontSize: "20px" }}>➤</span>}
+                    colorScheme="teal"
+                    onClick={() => sendMessage()}
+                    aria-label="Send message"
+                    size="md"
+                    isRound
+                    _hover={{ transform: "scale(1.1)", bg: "teal.600" }}
+                    transition="all 0.2s"
+                  />
+                ) : (
+                  <VoiceRecorder onRecordingComplete={handleVoiceRecording} />
+                )}
               </HStack>
             </FormControl>
             {isCallModalOpen && (
